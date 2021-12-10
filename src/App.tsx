@@ -1,13 +1,20 @@
 
 import React,{ useEffect, useRef, useState } from 'react'
-import { Container, Grid, Paper, Box, TextField, Button, Typography } from '@material-ui/core';
+import { Container, Grid, Paper, Box, TextField, Button, Typography, Modal } from '@material-ui/core';
 import Web3 from 'web3';
 import DiscreteSliderMarks from './component/linear'
-
+import ModalCustom from './component/modal'
 interface ConverterNumber {
   from: number,
   to: number
 }
+interface WalletData {
+  web3: Object,
+  networkId: number,
+  accounts: any | null
+}
+
+
 const App:React.FC = () => { 
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -16,11 +23,12 @@ const App:React.FC = () => {
     from: 0,
     to: 0
   })
-
   const [ balance, setBalance ] = useState<number | null>(0)
   const [ busdBalance, setBusdBalance ] = useState<number | null>(0)
   const [ busdUserBalance, setBusdUserBalance ] = useState<number | null>(0)
   const [ balancePercent, setBalancePercent ] = useState<number | null>(0)
+  const [ walletData, setwalletData ] = useState<WalletData | null>(null)
+  const [ modalstate, setModalState ] = useState<boolean>(false)
 
   const inputOnChange = (e: any) => {
     let enteredValue = Number(e.target.value)
@@ -44,34 +52,50 @@ const App:React.FC = () => {
     setBalancePercent(Number(e.target.value))
   }
 
-  const logout = async () => {
-    await window.ethereum.wallet.clear()
+  const logout = () => {
+    setwalletData(null)
+  }
+
+  const connectWallet = async () => {
+    if (window.ethereum) {
+      await window.ethereum.enable()
+    }
+    let _web3 = await new Web3(Web3.givenProvider)
+    const _accounts = await _web3.eth.getAccounts()
+    const _networkId = await _web3.eth.net.getId()
+    setwalletData({
+      web3: _web3,
+      accounts: _accounts,
+      networkId: _networkId
+    })
+
+    await _web3.eth.getBalance(_accounts[0])
+    .then( bal => _web3.utils.fromWei(bal, 'ether'))
+    .then( converted => {
+      setBusdBalance(Number(converted) * 575)
+      setBalance(Number(converted))
+      setBusdUserBalance(Number(converted) * 575 * Number(converted))
+    })
+  }
+
+  const CheckWalletDetails = () => {
+    if (walletData?.accounts > 0) {
+      setModalState(!modalstate)
+    }
+  }
+
+  const handleClose = () => {
+    setModalState(!modalstate)
   }
 
   useEffect(() => {
     ( async () => {
       //connecting wallet
-      if (window.ethereum) {
-        await window.ethereum.enable()
-      }
-      let web3 = await new Web3(Web3.givenProvider)
-      const accounts = await web3.eth.getAccounts()
-      const networkId = await web3.eth.net.getId()
-      console.log('accounts', accounts)
-      // const request = await web3.eth.requestAccounts()
-      await web3.eth.getBalance(accounts[0])
-      .then( bal => web3.utils.fromWei(bal, 'ether'))
-      .then( converted => {
-        setBusdBalance(Number(converted) * 575)
-        setBalance(Number(converted))
-        setBusdUserBalance(Number(converted) * 575 * Number(converted))
-      })
-      
       console.log('balance', balance)
       const { ethereum } = window
 
       //switch if network is not on testnet
-      if ( networkId !== 97 ) {
+      if ( walletData?.networkId !== 97 ) {
         try {
           ethereum?.request({
             method: 'wallet_addEthereumChain',
@@ -96,13 +120,8 @@ const App:React.FC = () => {
 
       }
 
-      window.ethereum.on('accountsChanged', async function() {
-        if (window.ethereum) {
-          await window.ethereum.enable()
-        }
-      })
     })()
-  }, [])
+  }, [walletData])
 
 
   useEffect( () => {
@@ -114,35 +133,36 @@ const App:React.FC = () => {
     <Container maxWidth="lg" className="App">
         <Grid lg={12} style={{display: 'flex', flexDirection: 'column', backgroundColor: '#39D3C4', padding: 30, alignContent: 'center'}}>
           <Paper style={{height: 500, width: 500, display: 'flex', flexDirection: 'column', textAlign: 'center'}}>
-            <Typography style={{margin: 30}}>
-              Your current balance is {balance} BNB
+          <Typography style={{margin: 30}} variant="h4">
+              Crypto Converter
             </Typography>
-            <Typography style={{fontSize: 14}}>
-              1 BNB = 575 BUSD
-            </Typography>
-            <Typography style={{fontSize: 14}}>
-              Current BUSD = {busdBalance?.toFixed(2)} and you have a total of {busdUserBalance?.toFixed(2)} BUSD
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item lg={6}>
+            { walletData ?
+              <> 
+                <Typography>
+                  Your current balance is {balance} BNB
+                </Typography>
+                <Typography style={{fontSize: 14}}>
+                  1 BNB = 575 BUSD
+                </Typography>
+                <Typography style={{fontSize: 14}}>
+                  Current BUSD = {busdBalance?.toFixed(2)} and you have a total of {busdUserBalance?.toFixed(2)} BUSD
+                </Typography>
+              </> : null
+            }
+            <Grid style={{display: 'flex', flexDirection: 'column'}}>
+              <Grid lg={12}>
                 <Box className="card">
-                  <Box className="cardTitle">From</Box>
+                  <Box className="cardTitle">NEP</Box>
                   <Box className="cardContent">
-                    <TextField
+                      <TextField 
                         ref={inputRef}
                         name="from"
-                        className="inputStyle"
-                        variant="standard"
-                        placeholder="0.0"
-                        type="number"
+                        label="NEP" 
+                        variant="outlined" 
                         value={converterValue.from === 0 ? "" : converterValue.from}
                         onChange={(e) => inputOnChange(e)}
                         style={{ fontFamily: "Poppins" }}
-                    />
-                      <Button className="unitLabel">
-                        ETH
-                        {/* <ExpandMoreIcon /> */}
-                      </Button>
+                       />
                     </Box>
                     <Box sx={{ textAlign: "center", fontSize: "10px" }}>
                       {/* Available balance: {presaleData.userBalance} ETH */}
@@ -150,53 +170,54 @@ const App:React.FC = () => {
                     <DiscreteSliderMarks
                       fromPricePercent={balancePercent}
                       onChange={sliderHandler}
+                      disabled={!walletData ? true : false}
                     />
                 </Box>
               </Grid>
-              <Grid item lg={6}>
-              <Box className="card">
-                  <Box className="cardTitle">To</Box>
+              <Grid item lg={12}>
+                <Box className="card">
+                  <Box className="cardTitle">BUSD</Box>
                   <Box className="cardContent">
                     <TextField
                       name="to"
-                      className="inputStyle"
-                      variant="standard"
-                      placeholder="0.0"
-                      type="number"
+                      variant="outlined"
+                      label="BUSD"
                       value={converterValue.to === 0 ? "" : converterValue.to}
                       onChange={ (e) => inputOnChange(e)}
                       style={{ fontFamily: "Poppins" }}
                     />
-                      <Button className="unitLabel">
-                        ETH
-                        {/* <ExpandMoreIcon /> */}
-                      </Button>
+
                     </Box>
                     <Box sx={{ textAlign: "center", fontSize: "10px" }}>
                     </Box>
                 </Box>
               </Grid>
-              <Button onClick={() => logout()} style={{alignSelf: 'center'}}>
-                Logout
+              { !walletData ? 
+              <Button onClick={() => connectWallet()} style={{margin: 20}}>
+                Connect wallet
               </Button>
+              :
+              (
+                <>
+                  <Button onClick={() => CheckWalletDetails()} style={{alignSelf: 'center', margin: 20}}>
+                    Check wallet details
+                  </Button>
+                  <Button onClick={() => logout()} style={{margin: 5}}>Logout</Button>
+                </>
+              )
+              }
             </Grid>
           </Paper>
         </Grid>
-
+        <ModalCustom 
+          open={modalstate} 
+          handleClose={handleClose}
+          networkId={walletData?.networkId} 
+          account={walletData?.accounts}
+          balance={balance}
+        />
     </Container>
   );
 }
 
 export default App;
-
-
-// web3.eth.sign(web3.eth.defaultAccount, web3.sha3('test'), function (err, signature) {
-//   console.log(signature);  // But maybe do some error checking. :-)
-// });
-// const util = require('ethereumjs-util');
-// const sig = util.fromRpcSig('<signature from front end>');
-// const publicKey = util.ecrecover(util.sha3('test'), sig.v, sig.r, sig.s);
-// const address = util.pubToAddress(publicKey).toString('hex');
-// window.web3 = await new window.Moralis.Web3.enable({ provider: "walletconnect" });
-
-// await window.web3.eth.currentProvider.disconnect();

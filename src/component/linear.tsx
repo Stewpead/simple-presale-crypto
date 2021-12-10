@@ -16,20 +16,22 @@ const marks = [
 
 interface Props {
     fromPricePercent: number | null
-    onChange: (e: any) => void
+    onChange: (e: any) => void,
+    disabled: boolean
 }
 
-const DiscreteSliderMarks:React.FC<Props> = ({ fromPricePercent, onChange }) => {
+const DiscreteSliderMarks:React.FC<Props> = ({ fromPricePercent, onChange, disabled }) => {
 
   return (
-    <Box className='slider-container' sx={{ width: "90%", padding: "0 20px", margin: "0 auto" }}>
+    <Box className='slider-container' sx={{ width: "60%", padding: "0 20px", margin: "0 auto" }}>
       <Slider
         aria-label="Custom marks"
         defaultValue={0}
-        step={10}
-        value={fromPricePercent!}
+        step={5}
+        value={disabled ? 0 : fromPricePercent!}
         marks={marks}
         onChange={onChange}
+        disabled={disabled}
       />
     </Box>
   );
