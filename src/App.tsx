@@ -132,7 +132,7 @@ const App:React.FC = () => {
   return (
     <Container maxWidth="lg" className="App">
         <Grid lg={12} style={{display: 'flex', flexDirection: 'column', backgroundColor: '#39D3C4', padding: 30, alignContent: 'center'}}>
-          <Paper style={{height: 500, width: 500, display: 'flex', flexDirection: 'column', textAlign: 'center'}}>
+          <Paper style={{height: 500, width: 500, display: 'flex', flexDirection: 'column', textAlign: 'center', alignSelf: 'center'}}>
           <Typography style={{margin: 30}} variant="h4">
               Crypto Converter
             </Typography>
@@ -193,16 +193,16 @@ const App:React.FC = () => {
                 </Box>
               </Grid>
               { !walletData ? 
-              <Button onClick={() => connectWallet()} style={{margin: 20}}>
+              <Button onClick={() => connectWallet()} style={{alignSelf: 'center',margin: 20,backgroundColor: '#39D3C4', color: '#fff'}} variant="contained">
                 Connect wallet
               </Button>
               :
               (
                 <>
-                  <Button onClick={() => CheckWalletDetails()} style={{alignSelf: 'center', margin: 20}}>
+                  <Button onClick={() => CheckWalletDetails()} style={{alignSelf: 'center', margin: 20, backgroundColor: '#39D3C4', color: '#fff'}} variant="contained">
                     Check wallet details
                   </Button>
-                  <Button onClick={() => logout()} style={{margin: 5}}>Logout</Button>
+                  <Button onClick={() => logout()} style={{alignSelf: 'center', margin: 5,backgroundColor: '#39D3C4', color: '#fff'}} variant="contained">Logout</Button>
                 </>
               )
               }
